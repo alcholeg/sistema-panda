@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import pandas as pd  # <-- Asegúrate de tener pandas importado
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'panda.db')
 
@@ -113,4 +114,57 @@ def inicializar_base_datos():
     """)
 
     conexion.commit()
+
+    # --- CARGA AUTOMÁTICA DEL EXCEL SI LA BASE ESTÁ VACÍA ---
+    cursor.execute("SELECT COUNT(*) FROM asignaturas")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        excel_path = os.path.join(os.path.dirname(__file__), 'materias_institucionales.xlsx')
+        if os.path.exists(excel_path):
+            try:
+                df = pd.read_excel(excel_path)
+                # Aquí iteramos el DataFrame para poblar las tablas
+                for _, row in df.iterrows():
+                    nombre_carrera = row.get('carrera', 'Carrera General')
+                    nombre_asignatura = row.get('asignatura', '')
+                    
+                    if not nombre_asignatura:
+                        continue
+                    
+                    # 1. Insertar o recuperar Carrera
+                    cursor.execute("INSERT OR IGNORE INTO carreras (nombre) VALUES (?)", (nombre_carrera,))
+                    cursor.execute("SELECT id FROM carreras WHERE nombre = ?", (nombre_carrera,))
+                    carrera_id = cursor.fetchone()[0]
+                    
+                    # 2. Insertar o recuperar Asignatura
+                    cursor.execute("INSERT OR IGNORE INTO asignaturas (nombre) VALUES (?)", (nombre_asignatura,))
+                    cursor.execute("SELECT id FROM asignaturas WHERE nombre = ?", (nombre_asignatura,))
+                    asignatura_id = cursor.fetchone()[0]
+                    
+                    # 3. Insertar relación y datos institucionales
+                    cursor.execute("""
+                        INSERT INTO carrera_asignatura (
+                            carrera_id, asignatura_id, codigo_asignatura, area, departamento, 
+                            dictado, director_area, responsable_asignatura, tipo_asignatura, 
+                            ubicacion_ciclo, contenidos_basicos, alcances_plan
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        carrera_id,
+                        asignatura_id,
+                        str(row.get('codigo_asignatura', '')),
+                        str(row.get('area', '')),
+                        str(row.get('departamento', '')),
+                        str(row.get('dictado', '')),
+                        str(row.get('director_area', '')),
+                        str(row.get('responsable_asignatura', '')),
+                        str(row.get('tipo_asignatura', '')),
+                        str(row.get('ubicacion_ciclo', '')),
+                        str(row.get('contenidos_basicos', '')),
+                        str(row.get('alcances_plan', ''))
+                    ))
+                conexion.commit()
+            except Exception as e:
+                print(f"Error procesando el Excel: {e}")
+
     conexion.close()
