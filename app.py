@@ -2,35 +2,19 @@ import streamlit as st
 import sys
 import os
 
-import streamlit as st
-from db_manager import inicializar_base_datos
-# Importa también tu función o módulo que lee el Excel y llena la BD, por ejemplo:
-from importar_excel import cargar_excel_a_db  # (ajustá el nombre según cómo lo hayas nombrado)
-
-# 1. Inicializamos la estructura de la base de datos si no existe
-inicializar_base_datos()
-
-# 2. Ejecutamos la carga del Excel a SQLite automáticamente al arrancar la app en la nube
-try:
-    cargar_excel_a_db()
-except Exception as e:
-    # Si ya estaban cargados o hay algún detalle, evitamos que rompa la app
-    pass
-
-
-# Agregamos la carpeta database al path para importar db_manager
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'database')))
-from db_manager import obtener_conexion, inicializar_base_datos
-
-# Inicializamos la base de datos por seguridad
-inicializar_base_datos()
-
-# Configuración de la página en Streamlit
+# 1. Configuración de la página (DEBE ser lo primero de Streamlit)
 st.set_page_config(
     page_title="PANDA - Sistema de Programas",
     page_icon="🐼",
     layout="wide"
 )
+
+# 2. Agregamos la carpeta database al path para importar db_manager
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'database')))
+from db_manager import obtener_conexion, inicializar_base_datos
+
+# 3. Inicializamos la base de datos y cargamos el Excel automáticamente en un solo paso
+inicializar_base_datos()
 
 # Título Principal Oficial de PANDA
 st.title("🐼 PANDA")
@@ -38,7 +22,6 @@ st.subheader("Facultad de Ciencias Bioquímicas y Farmacéuticas (UNR)")
 st.markdown("---")
 
 # --- CONTROL DE ACCESO / VISTA DOCENTE ---
-# Restringimos el menú lateral únicamente a la vista del formulario institucional.
 menu = st.sidebar.selectbox("Navegación", ["Formulario Programa Analítico"], key="menu_navegacion")
 
 if menu == "Formulario Programa Analítico":
