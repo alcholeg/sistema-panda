@@ -1,6 +1,6 @@
 import sqlite3
 import os
-import pandas as pd  # <-- Asegúrate de tener pandas importado
+import pandas as pd
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'panda.db')
 
@@ -120,26 +120,30 @@ def inicializar_base_datos():
     count = cursor.fetchone()[0]
 
     if count == 0:
-        excel_path = os.path.join(os.path.dirname(__file__), 'materias_institucionales.xlsx')
+        # Buscamos el Excel (puede estar en la misma carpeta o un nivel más arriba en la raíz)
+        base_dir = os.path.dirname(__file__)
+        excel_path = os.path.join(base_dir, 'materias_institucionales.xlsx')
+        if not os.path.exists(excel_path):
+            excel_path = os.path.abspath(os.path.join(base_dir, '..', 'materias_institucionales.xlsx'))
+
         if os.path.exists(excel_path):
             try:
                 df = pd.read_excel(excel_path)
-                # Aquí iteramos el DataFrame para poblar las tablas
                 for _, row in df.iterrows():
                     nombre_carrera = row.get('carrera', 'Carrera General')
                     nombre_asignatura = row.get('asignatura', '')
                     
-                    if not nombre_asignatura:
+                    if not nombre_asignatura or pd.isna(nombre_asignatura):
                         continue
                     
                     # 1. Insertar o recuperar Carrera
-                    cursor.execute("INSERT OR IGNORE INTO carreras (nombre) VALUES (?)", (nombre_carrera,))
-                    cursor.execute("SELECT id FROM carreras WHERE nombre = ?", (nombre_carrera,))
+                    cursor.execute("INSERT OR IGNORE INTO carreras (nombre) VALUES (?)", (str(nombre_carrera),))
+                    cursor.execute("SELECT id FROM carreras WHERE nombre = ?", (str(nombre_carrera),))
                     carrera_id = cursor.fetchone()[0]
                     
                     # 2. Insertar o recuperar Asignatura
-                    cursor.execute("INSERT OR IGNORE INTO asignaturas (nombre) VALUES (?)", (nombre_asignatura,))
-                    cursor.execute("SELECT id FROM asignaturas WHERE nombre = ?", (nombre_asignatura,))
+                    cursor.execute("INSERT OR IGNORE INTO asignaturas (nombre) VALUES (?)", (str(nombre_asignatura),))
+                    cursor.execute("SELECT id FROM asignaturas WHERE nombre = ?", (str(nombre_asignatura),))
                     asignatura_id = cursor.fetchone()[0]
                     
                     # 3. Insertar relación y datos institucionales
